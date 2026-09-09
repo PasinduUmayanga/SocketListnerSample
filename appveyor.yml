@@ -1,0 +1,28 @@
+version: 1.0.{build}
+
+image: Visual Studio 2022
+
+environment:
+  nodejs_version: "20"
+  NODE_OPTIONS: --openssl-legacy-provider
+  CI: true
+
+install:
+  - ps: Install-Product node $env:nodejs_version
+  - node --version
+  - npm --version
+  - npm ci --legacy-peer-deps
+
+build_script:
+  - npm run build
+
+test_script:
+  - npm test -- --watchAll=false --passWithNoTests
+
+artifacts:
+  - path: build
+    name: socketlistenersample-build
+
+cache:
+  - '%APPDATA%\npm-cache -> package-lock.json'
+  - node_modules -> package-lock.json
