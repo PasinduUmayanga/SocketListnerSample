@@ -7,7 +7,12 @@ import type { FakeSocket } from './test-utils/fakeSocket';
 
 vi.mock('../socket/client', async () => {
   const { createFakeSocket } = await import('./test-utils/fakeSocket');
-  return { socket: createFakeSocket() };
+  const fake = createFakeSocket();
+  return {
+    socket: fake,
+    subscribeConnection: fake.subscribeConnection,
+    getConnectionSnapshot: fake.getConnectionSnapshot,
+  };
 });
 
 const fakeSocket = socket as unknown as FakeSocket;

@@ -1,37 +1,11 @@
-import { useEffect, useState } from 'react';
-import { socket } from '../socket/client';
-
-type Status = 'connected' | 'disconnected' | 'reconnecting';
+import { useSyncExternalStore } from 'react';
+import { socket, subscribeConnection, getConnectionSnapshot } from '../socket/client';
 
 export function ReconnectPanel() {
-  const [status, setStatus] = useState<Status>(socket.connected ? 'connected' : 'disconnected');
-  const [attempts, setAttempts] = useState(0);
-  const [lastDisconnectReason, setLastDisconnectReason] = useState<string | null>(null);
-
-  useEffect(() => {
-    const handleConnect = () => {
-      setStatus('connected');
-      setAttempts(0);
-    };
-    const handleDisconnect = (reason: string) => {
-      setStatus('disconnected');
-      setLastDisconnectReason(reason);
-    };
-    const handleReconnectAttempt = () => {
-      setStatus('reconnecting');
-      setAttempts((prev) => prev + 1);
-    };
-
-    socket.on('connect', handleConnect);
-    socket.on('disconnect', handleDisconnect);
-    socket.io.on('reconnect_attempt', handleReconnectAttempt);
-
-    return () => {
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.io.off('reconnect_attempt', handleReconnectAttempt);
-    };
-  }, []);
+  const { connected, reconnectAttempts, lastDisconnectReason } = useSyncExternalStore(
+    subscribeConnection,
+    getConnectionSnapshot,
+  );
 
   const forceDisconnect = () => {
     socket.emit('debug:disconnectMe');
@@ -40,8 +14,8 @@ export function ReconnectPanel() {
   return (
     <section className="panel">
       <h2>Reconnect handling</h2>
-      <p>Status: {status}</p>
-      <p>Reconnect attempts: {attempts}</p>
+      <p>Status: {connected ? 'connected' : 'disconnected'}</p>
+      <p>Reconnect attempts: {reconnectAttempts}</p>
       <p>Last disconnect reason: {lastDisconnectReason ?? '–'}</p>
       <button onClick={forceDisconnect}>Force server-side disconnect</button>
     </section>
