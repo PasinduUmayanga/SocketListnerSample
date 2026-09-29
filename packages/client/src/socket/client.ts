@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client';
-import type { ClientToServerEvents, ServerToClientEvents } from '../shared/socket-events';
+import type { ClientToServerEvents, ServerToClientEvents } from '@socketlistenersample/shared';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? 'http://localhost:6600';
 

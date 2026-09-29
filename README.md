@@ -9,6 +9,7 @@
 ![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite&logoColor=white)
 ![Node](https://img.shields.io/badge/Node-24_LTS-339933?logo=node.js&logoColor=white)
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-4.x-010101?logo=socket.io&logoColor=white)
+![Turborepo](https://img.shields.io/badge/Turborepo-monorepo-EF4444?logo=turborepo&logoColor=white)
 
 # Web-Socket in NodeJS
 ## What is a Web Socket?
@@ -19,9 +20,11 @@ In order to make use of the Socket in NodeJS, we first need to install a depende
 
 ## Tech stack
 
-- **Client**: React 19 + TypeScript, bundled/served by Vite.
-- **Server**: Express 5 + Socket.IO 4, written in TypeScript and run directly with `tsx` (no build step for the server).
-- **Tests**: Vitest, with React Testing Library for the client and real `socket.io-client` connections against an in-process server for the server suite.
+- **Monorepo**: npm workspaces + [Turborepo](https://turborepo.com) for task orchestration across packages.
+- **Client** (`packages/client`): React 19 + TypeScript, bundled/served by Vite.
+- **Server** (`packages/server`): Express 5 + Socket.IO 4, written in TypeScript and run directly with `tsx` (no build step for the server).
+- **Shared** (`packages/shared`): the Socket.IO event contract (`ServerToClientEvents`/`ClientToServerEvents`), imported by both client and server so payloads stay in sync at compile time.
+- **Tests**: Vitest in each package — React Testing Library for the client, real `socket.io-client` connections against an in-process server for the server suite.
 - **CI**: AppVeyor, running on Node 24 (LTS).
 
 ## Getting started
@@ -29,21 +32,27 @@ In order to make use of the Socket in NodeJS, we first need to install a depende
 You'll need [Node.js 24 (LTS)](https://nodejs.org/en/download/) on your machine.
 
 ```
-npm install     # install dependencies
-npm run dev     # start the Vite dev server (client) and the Socket.IO server together
+npm install     # installs dependencies for every package in the workspace
+npm run dev     # start the client and server dev servers together, via turbo
 ```
 
-`npm run dev` runs the client (`http://localhost:5173`) and the server (`http://localhost:6600`) concurrently. Open the client URL in a browser.
+`npm run dev` runs the client (`http://localhost:5173`) and the server (`http://localhost:6600`) in parallel. Open the client URL in a browser.
 
-Other scripts:
+Other root-level scripts (each fans out to every package via Turborepo):
 
 ```
-npm run build     # type-check client + server, then build the client with Vite (outputs to dist/)
-npm run preview   # preview the production build
-npm run start:server   # run the server on its own, without watch mode
-npm test          # run the full test suite once
-npm run test:watch     # run tests in watch mode
-npm run lint       # lint the project
+npm run build   # type-check + build every package (client's Vite build lands in packages/client/dist)
+npm test        # run every package's test suite once
+npm run lint    # lint the whole workspace from a single root ESLint config
+```
+
+Scripts scoped to one package (run from that package's directory, or via `npm run <script> --workspace=<name>`):
+
+```
+npm run dev --workspace=@socketlistenersample/client     # client only
+npm run dev --workspace=@socketlistenersample/server      # server only
+npm run start --workspace=@socketlistenersample/server    # run the server once, without watch mode
+npm run preview --workspace=@socketlistenersample/client  # preview the production client build
 ```
 
 ## Project layout
@@ -51,32 +60,36 @@ npm run lint       # lint the project
 ```
 socketlistenersample
 ├── README.md
-├── index.html              Vite entry point
-├── package.json
-├── vite.config.ts          Vite + Vitest configuration
-├── tsconfig.json           TypeScript config for the client
-├── tsconfig.server.json    TypeScript config for the server
 ├── appveyor.yml
-├── public
-└── src
-    ├── main.tsx
-    ├── App.tsx              composes the feature-showcase panels
-    ├── components/          one component per Socket.IO feature panel
+├── package.json              workspaces: ["packages/*"], root scripts delegate to turbo
+├── turbo.json                 task pipeline (build/test/dev)
+├── tsconfig.base.json         shared TypeScript compiler options, extended by each package
+├── eslint.config.js            single flat config, lints every package from the root
+└── packages/
     ├── shared/
-    │   └── socket-events.ts typed event contract shared by client and server
-    ├── socket/
-    │   └── client.ts        the client's Socket.IO connection
+    │   ├── package.json        @socketlistenersample/shared — no build step, consumed as TS source
+    │   └── src/socket-events.ts
     ├── server/
-    │   └── index.ts         Express + Socket.IO server
-    └── __tests__/
-        ├── App.test.tsx
-        └── server/
-            └── socket-server.test.ts
+    │   ├── package.json        @socketlistenersample/server
+    │   ├── vitest.config.ts     Node test environment
+    │   └── src/
+    │       ├── index.ts         Express + Socket.IO server, exports createApp()
+    │       └── __tests__/socket-server.test.ts
+    └── client/
+        ├── package.json        @socketlistenersample/client
+        ├── index.html           Vite entry point
+        ├── vite.config.ts        Vite + Vitest configuration (jsdom environment)
+        ├── public/
+        └── src/
+            ├── main.tsx, App.tsx  composes the feature-showcase panels
+            ├── components/        one component per Socket.IO feature panel
+            ├── socket/client.ts   the client's Socket.IO connection
+            └── __tests__/App.test.tsx
 ```
 
 ## The server
 
-The server exposes a typed Socket.IO API (plus a `GET /health` route) and is started via `createApp()`, which only binds a port when the file is run directly — this lets tests spin up the same server on an ephemeral port.
+The server (`packages/server/src/index.ts`) exposes a typed Socket.IO API (plus a `GET /health` route) and is started via `createApp()`, which only binds a port when the file is run directly — this lets tests spin up the same server on an ephemeral port.
 
 ```ts
 import { createServer as createHttpServer } from 'http';
@@ -88,7 +101,7 @@ import type {
   InterServerEvents,
   ServerToClientEvents,
   SocketData,
-} from '../shared/socket-events';
+} from '@socketlistenersample/shared';
 
 export function createApp() {
   const app = express();
@@ -102,7 +115,7 @@ export function createApp() {
 
   io.on('connect', (socket) => {
     socket.emit('welcome', { message: "I'm from socket", timestamp: Date.now() });
-    // ...broadcast / rooms / ack / reconnect handlers, see src/server/index.ts
+    // ...broadcast / rooms / ack / reconnect handlers, see packages/server/src/index.ts
   });
 
   return { app, httpServer, io };
@@ -119,9 +132,9 @@ The client renders one panel per Socket.IO capability being demonstrated:
 | Broadcast | `client:broadcast` | `broadcast:message` | `io.emit(...)` fans a message out to every connected client, including the sender. Open two browser tabs to see both update. |
 | Rooms | `room:join` (ack), `room:message` | `room:message` | `socket.join(room)` + `io.to(room).emit(...)` — messages only reach clients that joined the same room. |
 | Ack callback | `ack:ping` (ack) | — (via callback) | A request/response round trip using Socket.IO's acknowledgement callbacks, with measured latency. |
-| Reconnect | `debug:disconnectMe` | — | Forces a server-side disconnect and shows the client's built-in automatic reconnection cycling through connection states. |
+| Reconnect | `debug:disconnectMe` | — | Forces a server-side disconnect. Socket.IO doesn't auto-reconnect after a *server-initiated* disconnect, so the client explicitly detects that reason and reconnects manually — the panel shows the connection status and last disconnect reason as it happens. |
 
-The event contract for all of the above lives in `src/shared/socket-events.ts` and is imported by both the client and the server, so client and server payloads stay in sync at compile time.
+The event contract for all of the above lives in `packages/shared/src/socket-events.ts` and is imported by both `packages/client` and `packages/server` as the `@socketlistenersample/shared` workspace package, so client and server payloads stay in sync at compile time.
 
 ## Testing
 
@@ -129,4 +142,4 @@ The event contract for all of the above lives in `src/shared/socket-events.ts` a
 npm test
 ```
 
-runs the whole suite once via Vitest: `src/__tests__/App.test.tsx` renders the app against a mocked socket and asserts the UI reacts correctly, and `src/__tests__/server/socket-server.test.ts` starts the real Express/Socket.IO server on an ephemeral port and drives it with real `socket.io-client` connections to verify the broadcast, rooms, ack, and reconnect behavior described above. Use `npm run test:watch` while iterating locally.
+runs every package's suite once via Vitest (in parallel, orchestrated by Turborepo): `packages/client/src/__tests__/App.test.tsx` renders the app against a mocked socket and asserts the UI reacts correctly, and `packages/server/src/__tests__/socket-server.test.ts` starts the real Express/Socket.IO server on an ephemeral port and drives it with real `socket.io-client` connections to verify the broadcast, rooms, ack, and reconnect behavior described above.

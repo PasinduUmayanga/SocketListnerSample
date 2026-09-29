@@ -13,14 +13,27 @@ install:
   - npm ci
 
 build_script:
-  - npm run build
+  - npm run build --workspace=@socketlistenersample/shared
+  - npm run build --workspace=@socketlistenersample/server
+  - npm run build --workspace=@socketlistenersample/client
 
 test_script:
-  - npm test
+  - npm run test --workspace=@socketlistenersample/server
+  - npm run test --workspace=@socketlistenersample/client
+
+on_finish:
+  - ps: >-
+      Get-ChildItem -Path packages -Filter test-results.xml -Recurse -ErrorAction SilentlyContinue |
+      ForEach-Object {
+        Write-Host "Uploading test results: $($_.FullName)"
+        (New-Object 'System.Net.WebClient').UploadFile("$env:APPVEYOR_API_URL/api/testresults/junit", $_.FullName)
+      }
 
 artifacts:
-  - path: dist
+  - path: packages/client/dist
     name: socketlistenersample-build
+  - path: packages/*/test-results.xml
+    name: test-results
 
 cache:
   - '%APPDATA%\npm-cache -> package-lock.json'

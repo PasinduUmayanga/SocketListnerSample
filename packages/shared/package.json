@@ -1,0 +1,12 @@
+{
+  "name": "@socketlistenersample/shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/socket-events.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json"
+  }
+}
