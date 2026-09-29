@@ -3,24 +3,23 @@ version: 1.0.{build}
 image: Visual Studio 2022
 
 environment:
-  nodejs_version: "20"
-  NODE_OPTIONS: --openssl-legacy-provider
+  nodejs_version: "24"
   CI: true
 
 install:
   - ps: Install-Product node $env:nodejs_version
   - node --version
   - npm --version
-  - npm ci --legacy-peer-deps
+  - npm ci
 
 build_script:
   - npm run build
 
 test_script:
-  - npm test -- --watchAll=false --passWithNoTests
+  - npm test
 
 artifacts:
-  - path: build
+  - path: dist
     name: socketlistenersample-build
 
 cache:
