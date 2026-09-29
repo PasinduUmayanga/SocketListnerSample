@@ -1,0 +1,23 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "@socketlistenersample/server#build": {
+      "outputs": []
+    },
+    "@socketlistenersample/shared#build": {
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["test-results.xml"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

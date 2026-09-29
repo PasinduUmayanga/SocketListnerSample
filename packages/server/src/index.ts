@@ -8,7 +8,7 @@ import type {
   InterServerEvents,
   ServerToClientEvents,
   SocketData,
-} from '../shared/socket-events';
+} from '@socketlistenersample/shared';
 
 const PORT = Number(process.env.PORT ?? 6600);
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';

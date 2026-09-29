@@ -5,11 +5,10 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist'] },
+  { ignores: ['**/dist', '**/node_modules'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/server/**', 'src/__tests__/server/**'],
+    files: ['packages/client/src/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.browser,
@@ -25,14 +24,14 @@ export default tseslint.config(
   },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ['src/server/**/*.ts', 'src/__tests__/server/**/*.ts', 'src/shared/**/*.ts'],
+    files: ['packages/server/src/**/*.ts', 'packages/shared/src/**/*.ts'],
     languageOptions: {
       ecmaVersion: 2022,
       globals: globals.node,
     },
   },
   {
-    files: ['vite.config.ts', 'vitest.setup.ts'],
+    files: ['packages/client/vite.config.ts', 'packages/client/vitest.setup.ts', 'packages/server/vitest.config.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2022,

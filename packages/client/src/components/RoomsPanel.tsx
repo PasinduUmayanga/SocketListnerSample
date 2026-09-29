@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { socket } from '../socket/client';
-import { ROOMS, type RoomName } from '../shared/socket-events';
+import { ROOMS, type RoomName } from '@socketlistenersample/shared';
 
 interface LogEntry {
   room: string;

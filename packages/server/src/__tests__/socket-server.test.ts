@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { AddressInfo } from 'node:net';
 import { io as ioClient, type Socket } from 'socket.io-client';
-import { createApp } from '../../server';
-import type { ClientToServerEvents, ServerToClientEvents } from '../../shared/socket-events';
+import type { ClientToServerEvents, ServerToClientEvents } from '@socketlistenersample/shared';
+import { createApp } from '../index';
 
 type TestSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -104,7 +104,7 @@ describe('socket server', () => {
   it('reconnects after a server-initiated disconnect once the client reconnects manually', async () => {
     // Socket.IO only auto-reconnects after network-level drops; a server-initiated
     // disconnect ("io server disconnect") requires an explicit client.connect() call,
-    // same as src/socket/client.ts does for the real app.
+    // same as packages/client/src/socket/client.ts does for the real app.
     const client = connect();
     await once(client, 'welcome');
 
